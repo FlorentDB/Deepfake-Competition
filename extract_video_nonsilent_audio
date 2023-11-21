@@ -1,0 +1,46 @@
+from moviepy.editor import VideoFileClip
+import librosa 
+import soundfile as sf
+from tqdm import tqdm
+import os
+
+def extract_sound(input_video_path, output_sound_path):
+    # Extract sound
+    video_clip = VideoFileClip(input_video_path)
+    audio_clip = video_clip.audio
+    audio_clip.write_audiofile(output_sound_path)
+
+    cut_silence(audio_clip)
+
+def cut_silence(output_sound_path):
+    y, sr = librosa.load(output_sound_path)
+    top_db=35
+
+    output_sound_folder = "non_silent_parts"
+    if not os.path.isdir(output_sound_folder):
+        os.makedirs(output_sound_folder)
+    os.chdir(output_sound_folder)
+
+    # Extract non-silent intervals
+    non_silent_intervals = librosa.effects.split(y, top_db=top_db)
+    duration = len(y)/sr
+    non_silent_segments = []
+    print(f"\nnombre de segment {len(non_silent_intervals)}\n")
+    for (start, end) in tqdm(non_silent_intervals):
+        if end < len(y) :
+            non_silent_segments.append(y[start:end])
+        else :
+            non_silent_segments.append(y[start:])
+
+    for i,seg in tqdm(enumerate(non_silent_segments)):
+        #on prend que les parties qui ont plus d'une demi seconde sinon pas de paroles
+        if len(seg) > sr/2:
+            sf.write(f"macron{i+1}.wav",seg,sr)
+
+
+if __name__ == "__main__":
+    input_video_path = "base_macron.mp4"
+    output_sound_path = "base_macron_sound.wav"
+    
+    #extract_sound(input_video_path, output_sound_path)
+    cut_silence(output_sound_path)
